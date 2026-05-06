@@ -9,7 +9,10 @@ PubSubClient client(espClient);  //Pass the WiFi client to the MQTT client
 const char* mqtt_server="broker.emqx.io";  //Free public test broker provided by EMQX
 const int mqtt_port=1883;   //Default non-encrypted port for MQTT
 const char* led_topic="foshan/ESP32/ledControl";
+const char* sensor_topic="foshan/ESP32/sensorData";  //Publish topic
 const int ledPin=2;
+
+unsigned long lastTime=0;  //Time tracking variable
 
 //Initialize WiFi
 void setup_wifi(){
@@ -85,4 +88,15 @@ void loop(){
 		reconnect();
 	}
   client.loop();  //Maintain MQTT client heartbeat and network processing
+  unsigned long now=millis();  //Get current uptime in milliseconds
+  if (now-lastTime>5000)
+  {
+	lastTime=now;
+	float temp=random(200,350)/10;  //Generate a random float between 20.0 and 35.0 to simulate temperature
+	//Convert float to C++ String
+	String tempStr=String(temp,1);  //Keep 1 decimal place
+	Serial.println(tempStr);
+	client.publish(sensor_topic,tempStr.c_str());
+  }
+  
 }
