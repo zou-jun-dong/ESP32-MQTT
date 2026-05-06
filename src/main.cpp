@@ -8,6 +8,8 @@ PubSubClient client(espClient);  //Pass the WiFi client to the MQTT client
 
 const char* mqtt_server="broker.emqx.io";  //Free public test broker provided by EMQX
 const int mqtt_port=1883;   //Default non-encrypted port for MQTT
+const char* led_topic="foshan/ESP32/ledControl";
+const int ledPin=2;
 
 //Initialize WiFi
 void setup_wifi(){
@@ -36,6 +38,7 @@ void reconnect() {
 		{
 			/* code */
 			Serial.println("connected!");
+			client.subscribe(led_topic);
 		}
 		else{
             Serial.print("failed,rc=");
@@ -48,10 +51,32 @@ void reconnect() {
 	
 }
 
+void callback(char* topic,byte* palyload,unsigned int length) {
+	String message;
+	for (int i = 0; i < length; i++)
+	{
+		message+=(char)palyload[i];
+	}
+	Serial.println(message);
+	if (message=="ON")
+	{
+		digitalWrite(ledPin,HIGH);
+		Serial.println("LED is now ON");
+	}else if (message=="OFF")
+	{
+		digitalWrite(ledPin,LOW);
+		Serial.println("LED is now OFF");
+	}
+	
+	
+}
+
 void setup(){
 	Serial.begin(115200);  
+	pinMode(ledPin,OUTPUT);
 	setup_wifi();  //Start Wi-Fi
     client.setServer(mqtt_server,mqtt_port);  //Set the MQTT broker address and port
+	client.setCallback(callback);
 }
 
 void loop(){
