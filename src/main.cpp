@@ -59,5 +59,5 @@ void loop(){
 	{
 		reconnect();
 	}
-	client.loop();  //Maintain MQTT client heartbeat and network processing
+  client.loop();  //Maintain MQTT client heartbeat and network processing
 }
