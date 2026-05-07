@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <secrets.h>
+#include <ArduinoJson.h> //Add JSON library
 
 WiFiClient espClient;  //Creat a Wi-Fi client
 PubSubClient client(espClient);  //Pass the WiFi client to the MQTT client
@@ -94,9 +95,19 @@ void loop(){
 	lastTime=now;
 	float temp=random(200,350)/10;  //Generate a random float between 20.0 and 35.0 to simulate temperature
 	//Convert float to C++ String
-	String tempStr=String(temp,1);  //Keep 1 decimal place
-	Serial.println(tempStr);
-	client.publish(sensor_topic,tempStr.c_str());
+    JsonDocument doc;  //Instantiate a JSON document object
+
+	//Populate data like a dictionary 
+	doc["device"]="ESP32-S3";
+	doc["temperrature"]=temp;
+	doc["status"]="running";
+	String JsonString;  //Used to store the final generated string
+
+	//Serialize:Convert structured data in doc into text and put it into jsonString
+	serializeJson(doc,JsonString);
+	Serial.print("Publishing JSON:");
+	Serial.println(JsonString);
+	client.publish(sensor_topic,JsonString.c_str());   //Publish the packet with JSON fortmat to the cloud
   }
   
 }
