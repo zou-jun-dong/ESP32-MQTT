@@ -13,26 +13,24 @@ const char* led_topic="foshan/ESP32/ledControl";
 const char* sensor_topic="foshan/ESP32/sensorData";  //Publish topic
 const int ledPin=2;
 
-unsigned long lastTime=0;  //Time tracking variable
+unsigned long lastMsgTime=0;  //Time tracking variable
+unsigned long lastWiFiRetryTime=0;
+unsigned long lastMqttRetryTime=0;
+const unsigned long retryInterval=5000;
 
 //Initialize WiFi
 void setup_wifi(){
-	WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+	if (WiFi.isConnected())
+	{
+		return;
+	}
 	Serial.print("Connecting to");
 	Serial.println(WIFI_SSID);
-	while (!WiFi.isConnected())
-	{
-		delay(500);
-		Serial.print("."); 
-	}
-	Serial.println("");
-	Serial.println("WiFi connected!");
-	Serial.print("WiFI address:");
-	Serial.println(WiFi.localIP());
+	WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
 }
 
 void reconnect() {
-	while (!client.connected())
+	while (WiFi.isConnected()&&!client.connected())
 	{
 		Serial.println("Attempting MQTT connection...");
 		//Create a random client ID
@@ -84,15 +82,30 @@ void setup(){
 }
 
 void loop(){
-	if (!client.connected())
+	unsigned long now=millis();  //Get current uptime in milliseconds
+  if(!WiFi.isConnected())
+  {
+	if (now-lastWiFiRetryTime>=retryInterval)
 	{
+		lastWiFiRetryTime=now;
+		Serial.println("[Network] Wi-Fi connection lost. Attempting to reconnect...");
+		WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+	}
+}
+else if (!client.connected())
+{
+	if (now-lastMqttRetryTime>=retryInterval)
+	{
+		lastMqttRetryTime=now;
 		reconnect();
 	}
-  client.loop();  //Maintain MQTT client heartbeat and network processing
-  unsigned long now=millis();  //Get current uptime in milliseconds
-  if (now-lastTime>5000)
+	
+}
+else
+{  client.loop();
+   if (now-lastMsgTime>5000)
   {
-	lastTime=now;
+	lastMsgTime=now;
 	float temp=random(200,350)/10;  //Generate a random float between 20.0 and 35.0 to simulate temperature
 	//Convert float to C++ String
     JsonDocument doc;  //Instantiate a JSON document object
@@ -107,7 +120,8 @@ void loop(){
 	serializeJson(doc,JsonString);
 	Serial.print("Publishing JSON:");
 	Serial.println(JsonString);
-	client.publish(sensor_topic,JsonString.c_str());   //Publish the packet with JSON fortmat to the cloud
-  }
+	client.publish(sensor_topic,JsonString.c_str());}   //Publish the packet with JSON fortmat to the cloud
+}
+
   
 }
